@@ -1,0 +1,110 @@
+<!-- templates/index.html - Versão 13.1 (Cavalo de Troia - Frontend CORRIGIDO) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Oportunidades | Espressão Socioambiental</title>
+    <style>
+        :root{--cor-primaria:#5D4037;--cor-secundaria:#00838F;--cor-fundo:#E0F7FA;--cor-container:#FFFFFF;--cor-texto-claro:#FFFFFF;--cor-texto-escuro:#37474F;--cor-borda:#B0BEC5;--cor-sombra:rgba(0,0,0,0.08);--cor-favorito:#FFC107}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;margin:0;background-color:var(--cor-fundo);color:var(--cor-texto-escuro)}.container{max-width:1300px;margin:0 auto;padding:20px}header{background-color:var(--cor-primaria);color:var(--cor-texto-claro);padding:25px;text-align:center;border-radius:12px;margin-bottom:30px;box-shadow:0 4px 10px var(--cor-sombra)}header h1{margin:0;font-size:2.2em}header p{margin:5px 0 0;font-size:1.1em;opacity:.9}header h2{font-size:1.2em;opacity:.8;font-weight:400;margin:15px 0 0}.main-content{background-color:var(--cor-container);padding:30px;border-radius:12px;box-shadow:0 4px 20px var(--cor-sombra)}#form-filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px;margin-bottom:30px;align-items:end}.filtro-grupo{display:flex;flex-direction:column}.filtro-grupo label{font-weight:700;margin-bottom:8px;font-size:.9em}.filtro-grupo input,.filtro-grupo select{padding:12px;border:1px solid var(--cor-borda);border-radius:8px;font-size:1em;background-color:#F5F5F5}#btn-buscar{background-color:var(--cor-secundaria);color:var(--cor-texto-claro);border:none;padding:12px 30px;font-size:1.1em;font-weight:700;border-radius:8px;cursor:pointer;transition:all .3s;height:48px;grid-column:-1}#btn-buscar:hover{background-color:#006064;transform:translateY(-2px)}#btn-buscar:disabled{background-color:#9E9E9E;cursor:not-allowed}.loader{border:5px solid #f3f3f3;border-top:5px solid var(--cor-secundaria);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto;display:none}@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}.results-summary{margin:20px 0;padding:15px;background-color:var(--cor-fundo);border-left:5px solid var(--cor-secundaria);border-radius:4px;font-weight:500}.licitacao-card{border:1px solid var(--cor-borda);border-radius:12px;padding:20px;margin-bottom:20px;transition:box-shadow .3s}.licitacao-card:hover{box-shadow:0 4px 15px var(--cor-sombra)}.card-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--cor-borda);padding-bottom:10px;margin-bottom:15px}.card-header h3{margin:0;font-size:1.3em;color:var(--cor-primaria)}.card-header .fonte{background-color:var(--cor-primaria);color:var(--cor-texto-claro);padding:5px 12px;border-radius:15px;font-size:.8em;font-weight:700}.card-footer{margin-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}.card-footer a{background-color:var(--cor-secundaria);color:var(--cor-texto-claro);text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;transition:background-color .3s}.card-footer a:hover{background-color:#006064}.card-info-prazo{font-weight:700;color:var(--cor-secundaria)}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Central de Oportunidades</h1>
+            <p>Espressão Socioambiental</p>
+        </header>
+        <main class="main-content">
+            <form id="form-filtros">
+                <div class="filtro-grupo">
+                    <label for="filtro-nicho">Nicho de Atuação</label>
+                    <select id="filtro-nicho" name="nicho">
+                        {% for key, value in nichos.items() %}
+                            <option value="{{ key }}">{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtro-uf">Estado (UF)</label>
+                    <select id="filtro-uf" name="uf">
+                        <option value="">Todos</option>
+                        {% for uf in ufs %}
+                            <option value="{{ uf }}">{{ uf }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" id="btn-buscar">Buscar</button>
+            </form>
+            <div id="status-area">
+                <div class="loader" id="loader"></div>
+                <div id="results-summary" class="results-summary" style="display: none;"></div>
+            </div>
+            <div id="results-container"></div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('form-filtros');
+            const btn = document.getElementById('btn-buscar');
+            const loader = document.getElementById('loader');
+            const resultsContainer = document.getElementById('results-container');
+            const summary = document.getElementById('results-summary');
+            let todosResultados = [];
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                btn.disabled = true;
+                loader.style.display = 'block';
+                resultsContainer.innerHTML = '';
+                summary.style.display = 'none';
+                todosResultados = [];
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData);
+
+                const fetchFromEndpoint = async (endpoint, params) => {
+                    const url = `/${endpoint}?${params.toString()}`;
+                    try {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`Erro de rede em ${endpoint}`);
+                        const result = await response.json();
+                        return result.success ? result.data : [];
+                    } catch (error) {
+                        console.error(`Falha ao buscar em ${endpoint}:`, error);
+                        return [];
+                    }
+                };
+
+                // AQUI ESTÁ A CORREÇÃO: Chamando o endpoint correto do Selenium
+                btn.textContent = 'Buscando no PNCP (pode levar 2 min)...';
+                todosResultados.push(...await fetchFromEndpoint('buscar-pncp-selenium', params));
+                displayResults(todosResultados);
+
+                summary.textContent = `Busca concluída! ${todosResultados.length} oportunidades encontradas.`;
+                summary.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Buscar';
+                loader.style.display = 'none';
+            });
+
+            function displayResults(licitacoes) {
+                resultsContainer.innerHTML = licitacoes.length === 0 
+                    ? '<p style="text-align: center;">Nenhuma oportunidade encontrada com os filtros aplicados.</p>'
+                    : licitacoes.map((lic, index) => createCardHTML(lic, index)).join('');
+            }
+
+            function createCardHTML(lic, id) {
+                return `<div class="licitacao-card" id="card-${id}">
+                    <div class="card-header"><h3>${lic.modalidade || 'Edital'}</h3><span class="fonte">${lic.fonte}</span></div>
+                    <p><strong>Objeto:</strong> ${lic.objeto}</p>
+                    <p><strong>Órgão/Proponente:</strong> ${lic.orgao || 'N/A'} - ${lic.uf || ''}</p>
+                    <p><span class="card-info-prazo">Prazo Final: ${lic.data_abertura_proposta || 'N/A'}</span></p>
+                    <div class="card-footer">
+                        <a href="${lic.link}" target="_blank" rel="noopener noreferrer">Ver no Portal</a>
+                    </div>
+                </div>`;
+            }
+        });
+    </script>
+</body>
+</html>
